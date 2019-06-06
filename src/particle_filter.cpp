@@ -62,7 +62,40 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  std::default_random_engine gen;
 
+
+  double x_p;
+  double y_p;
+  double theta_p;
+  double theta_0;
+  double theta_f;
+  for (int i = 0; i < particles.size(); ++i) {
+    // apply Gaussian noise to particle position
+    normal_distribution<double> dist_x(particles[i].x, std_pos[0]);
+    normal_distribution<double> dist_y(particles[i].y, std_pos[1]);
+    normal_distribution<double> dist_theta(particles[i].theta, std_pos[2]);
+    x_p = dist_x(gen);
+    y_p = dist_y(gen);
+    theta_p = dist_theta(gen);
+
+    if (abs(yaw_rate) > 1e-8){
+      theta_0 = theta_p;
+      theta_f = theta_0 + yaw_rate * delta_t;
+
+      particles[i].x = x_p + (velocity / (yaw_rate * delta_t)) * (sin(theta_f) - sin(theta_0));
+      particles[i].y = y_p + (velocity / (yaw_rate * delta_t)) * (cos(theta_0) - cos(theta_f));
+      particles[i].theta = theta_f;
+    }
+    else {    // model for small yaw rate to avoid dividing by 0
+      theta_0 = theta_p;
+      particles[i].x = x_p + velocity * delta_t * cos(theta_0);
+      particles[i].y = y_p + velocity * delta_t * sin(theta_0);
+      particles[i].theta = theta_0 + yaw_rate * delta_t;
+    }
+  }
+//  std::cout << particles[0].x << "\n";
+//  std::cout << particles[1].x << "\n\n";
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
