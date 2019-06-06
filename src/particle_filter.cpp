@@ -46,6 +46,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     p.x = dist_x(gen);
     p.y = dist_y(gen);
     p.theta = dist_theta(gen);
+    p.weight = 1;
     // Add particle
     particles.push_back(p);
   }
@@ -70,7 +71,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   double theta_p;
   double theta_0;
   double theta_f;
-  for (int i = 0; i < particles.size(); ++i) {
+  for (unsigned int i = 0; i < particles.size(); ++i) {
     // apply Gaussian noise to particle position
     normal_distribution<double> dist_x(particles[i].x, std_pos[0]);
     normal_distribution<double> dist_y(particles[i].y, std_pos[1]);
@@ -108,7 +109,31 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper
    *   during the updateWeights phase.
    */
-
+  //std::cout << observations.size() << "\n";
+  double distance;
+  double min_dist;
+  int nearest_landmark;
+  for (unsigned int i = 0; i < observations.size(); ++i) {
+    min_dist = 1e10;
+    nearest_landmark = -1;
+    for (unsigned int j = 0; j < predicted.size(); ++j) {
+      distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
+      if (distance < min_dist) {
+        min_dist = distance;
+        nearest_landmark = j;
+        //std::cout << min_dist <<", "<< nearest_landmark <<", "<< predicted[j].id << "\n";
+      }
+    }
+    //std::cout << nearest_landmark << ", " << predicted[0].id << "\n";
+    observations[i].id = nearest_landmark;
+    for (unsigned int j = 0; j < predicted.size(); ++j) {
+      distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
+      //std::cout << predicted[j].x << ", " << predicted[j].y << ", " << j <<", " << distance<<"\n";
+      //std::cout << observations[i].x << ", " << observations[i].y << ", " << observations[i].id <<", "<< min_dist<<"\n";
+    }
+    //std::cout << "\n";
+    //std::cout << observations[i].id << "\n";
+  }
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -128,6 +153,70 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
 
+  double weights_sum = 0;
+
+  for (unsigned int i=0; i < particles.size(); ++i) {
+    vector<LandmarkObs> observations_mc;   // observations in map coordinates
+    for (unsigned int j=0; j < observations.size(); ++j) {
+      LandmarkObs obs_mc;
+      obs_mc.id = observations[j].id;
+      obs_mc.x = cos(particles[i].theta) * observations[j].x -
+                 sin(particles[i].theta) * observations[j].y +
+                 particles[i].x;
+      obs_mc.y = sin(particles[i].theta) * observations[j].x +
+                 cos(particles[i].theta) * observations[j].y +
+                 particles[i].y;
+      observations_mc.push_back(obs_mc);
+    }
+    // Convert map_landmarks.landmark_list to vector<LandmarkObs>
+    vector<LandmarkObs> landmarks;
+    for (unsigned int i=0; i<map_landmarks.landmark_list.size(); ++i) {
+      LandmarkObs landmark;
+      landmark.id = map_landmarks.landmark_list[i].id_i;
+      landmark.x = map_landmarks.landmark_list[i].x_f;
+      landmark.y = map_landmarks.landmark_list[i].y_f;
+      landmarks.push_back(landmark);
+    }
+
+    dataAssociation(landmarks, observations_mc);
+    //SetAssociations(particles[i], observations_mc[:].id, observations_mc.x, observations_mc.y);
+    double obs_prob;
+    double total_prob = 1;
+    double coeff = 1/ (2 * M_PI * std_landmark[0] * std_landmark[1]);
+    double mu_x, mu_y, exponent;
+    double max_prob = 0;
+    for (unsigned int j=0; j < observations_mc.size(); ++j) {
+      mu_x = landmarks[observations_mc[j].id].x;
+      mu_y = landmarks[observations_mc[j].id].y;
+      //std::cout << mu_x << ", "<<observations_mc[j].x<<", "<<observations_mc[j].id<<"\n";
+      //std::cout << mu_y << ", "<<observations_mc[j].y<<", "<<observations_mc[j].id<<"\n";
+
+      exponent = -((pow(observations_mc[j].x - mu_x, 2) / (2 * pow(std_landmark[0], 2))) +
+                   (pow(observations_mc[j].y - mu_y, 2) / (2 * pow(std_landmark[1], 2))) );
+      obs_prob = coeff * exp(exponent);
+      if (obs_prob > max_prob){
+        max_prob = obs_prob;
+      }
+      if (obs_prob < 1e-8){
+        obs_prob = 1e-8;
+      }
+      //std::cout << obs_prob << "\n";
+      total_prob *= obs_prob;
+    }
+    //std::cout << total_prob << "\n";
+    //std::cout << max_prob << "\n";
+    //std::cout << "\n";
+    particles[i].weight = total_prob;
+    weights_sum += particles[i].weight;
+  }
+  // Normalize
+  double final_prob = 0;
+  for (unsigned int i=0; i < particles.size(); ++i) {
+    particles[i].weight /= weights_sum;
+    //std::cout << particles[i].weight << "\n";
+    final_prob += particles[i].weight;
+  }
+  //std::cout << final_prob << "\n\n";
 }
 
 void ParticleFilter::resample() {
