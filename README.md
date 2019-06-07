@@ -56,7 +56,8 @@ The motion model used is the bicycle model, where the particles' positions are u
 		  }
 
 - updateWeights(): Assigns weights to the particles according to the probability to be at the correct car's position.
-First, the observations coordinates, that are given within our car system of coordinates, will be transformed to the map's system of coordinates:
+
+	First, the observations coordinates, that are given within our car system of coordinates, will be transformed to the map's system of coordinates:
 
 	    vector<LandmarkObs> observations_mc;   // observations in map coordinates
 	    for (unsigned int j=0; j < observations.size(); ++j) {
@@ -71,9 +72,9 @@ First, the observations coordinates, that are given within our car system of coo
 	      observations_mc.push_back(obs_mc);
 	    }
 
-Second, the landmarks need to be converted to the same datatype as the coordinates. Next, each observation is associated to one landmark, just choosing the nearest one. This is done in the function dataAssociation().
+	Second, the landmarks need to be converted to the same datatype as the coordinates. Next, each observation is associated to one landmark, just choosing the nearest one. This is done in the function dataAssociation().
 
-Finally, each observation has a certain probability to actually be the observation of its associated landmark, depending on how accurate, or close, the observation and the landmark are. This is calculated by the Multivariate-Gaussian probability density. The probability assigned to each particle is the multiplication of the probabilities of its corresponding observations. The probabilities of all particles is normalized in the last step.
+	Finally, each observation has a certain probability to actually be the observation of its associated landmark, depending on how accurate, or close, the observation and the landmark are. This is calculated by the Multivariate-Gaussian probability density. The probability assigned to each particle is the multiplication of the probabilities of its corresponding observations. The probabilities of all particles is normalized in the last step.
 
 		    for (unsigned int j=0; j < observations_mc.size(); ++j) {
 		      mu_x = landmarks[observations_mc[j].id].x;
@@ -93,7 +94,8 @@ Finally, each observation has a certain probability to actually be the observati
   
 
 - resample(): Chooses which particles pass to the next cycle, with repetition, according to their weights.
-As previously, I use `default_random_engine`, but the distribution to choose the particle indexes according to their weights is `discrete_distribution`
+
+	As previously, I use `default_random_engine`, but the distribution to choose the particle indexes according to their weights is `discrete_distribution`
 
 		std::default_random_engine gen;
 		std::discrete_distribution<int> dist_weights(weights.begin(), weights.end());
