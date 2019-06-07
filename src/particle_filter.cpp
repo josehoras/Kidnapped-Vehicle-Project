@@ -181,19 +181,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       exponent = -((pow(observations_mc[j].x - mu_x, 2) / (2 * pow(std_landmark[0], 2))) +
                    (pow(observations_mc[j].y - mu_y, 2) / (2 * pow(std_landmark[1], 2))) );
       obs_prob = coeff * exp(exponent);
-      if (obs_prob > max_prob){
-        max_prob = obs_prob;
-      }
       total_prob *= obs_prob;
     }
     particles[i].weight = total_prob;
     weights_sum += particles[i].weight;
   }
   // Normalize
-  double final_prob = 0;
   for (unsigned int i=0; i < particles.size(); ++i) {
     particles[i].weight /= weights_sum;
-    final_prob += particles[i].weight;
   }
 }
 
