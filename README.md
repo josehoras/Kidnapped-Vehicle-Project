@@ -32,7 +32,8 @@ for (int i = 0; i < num_particles; ++i) {
 }
 ParticleFilter::is_initialized = true;
 ```
-	Choosing even 9 particles was already enough to finish the simulation successfully, so 50 particles contains a big buffer without still compromising on execution speed. The simulation began to last more than the specified 100 seconds with 1200 particles, on my computer.
+
+	Choosing	 even 9 particles was already enough to finish the simulation successfully, so 50 particles contains a big buffer without still compromising on execution speed. The simulation began to last more than the specified 100 seconds with 1200 particles, on my computer.
 
 - prediction(): Updates the particles' position according to the motion model, and introducing the random Gaussian noise.
 - updateWeights(): Assigns weights to the particles according to the probability to be at the correct car's position.
