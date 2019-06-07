@@ -16,7 +16,7 @@ The simulation delivers a great accuracy within the time specified in the [proje
 
 A starter code is given by the Udacity project contained in `/src`. To implement the full particle filter only the file `particle_filter.cpp` needed to be completed. The main functions, and steps in the implementation, are:
 
-- init(): Initializes the particle randomly in a Gaussian distribution around the car's position given by the GPS.
+- **init()**: Initializes the particle randomly in a Gaussian distribution around the car's position given by the GPS.
 The Gaussian distribution is implemented using `default_random_engine`, that picks values from the given distribution, and the distribution `normal_distribution`
 
 		num_particles = 50;
@@ -33,7 +33,7 @@ The Gaussian distribution is implemented using `default_random_engine`, that pic
 
 	Choosing	 even 9 particles was already enough to finish the simulation successfully, so 50 particles contains a big buffer without still compromising on execution speed. The simulation began to last more than the specified 100 seconds with 1200 particles, on my computer.
 
-- prediction(): Updates the particles' position according to the motion model, and introducing the random Gaussian noise.
+- **prediction()**: Updates the particles' position according to the motion model, and introducing the random Gaussian noise.
 The motion model used is the bicycle model, where the particles' positions are updated accounting for their velocity and yaw rate. As the motion equations of the model include a division by the yaw rate, a particular case for zero or very small yaw rate is used as well to avoid divisions by zero.
 
 		  for (unsigned int i = 0; i < particles.size(); ++i) {
@@ -55,7 +55,7 @@ The motion model used is the bicycle model, where the particles' positions are u
 		    }
 		  }
 
-- updateWeights(): Assigns weights to the particles according to the probability to be at the correct car's position.
+- **updateWeights()**: Assigns weights to the particles according to the probability to be at the correct car's position.
 
 	First, the observations coordinates, that are given within our car system of coordinates, will be transformed to the map's system of coordinates:
 
@@ -93,7 +93,7 @@ The motion model used is the bicycle model, where the particles' positions are u
 		  }
   
 
-- resample(): Chooses which particles pass to the next cycle, with repetition, according to their weights.
+- **resample()**: Chooses which particles pass to the next cycle, with repetition, according to their weights.
 
 	As previously, I use `default_random_engine`, but the distribution to choose the particle indexes according to their weights is `discrete_distribution`
 
