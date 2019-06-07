@@ -50,11 +50,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     // Add particle
     particles.push_back(p);
   }
-
-//  for (int i = 0; i < num_particles; ++i) {
-//    std::cout << "Particle " << particles[i].id << ": "
-//               << particles[i].x << ", " << particles[i].y << "\n";
-//  }
   ParticleFilter::is_initialized = true;
 }
 
@@ -83,7 +78,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     y_p = dist_y(gen);
     theta_p = dist_theta(gen);
 
-    if (abs(yaw_rate) > 1e-8){
+    if (abs(yaw_rate) > 1e-8){  // model for changing theta
       theta_0 = theta_p;
       theta_f = theta_0 + yaw_rate * delta_t;
 
@@ -91,18 +86,13 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
       particles[i].y = y_p + (velocity / yaw_rate) * (cos(theta_0) - cos(theta_f));
       particles[i].theta = theta_f;
     }
-    else {    // model for small yaw rate to avoid dividing by 0
+    else {                      // linear model for small yaw rate to avoid dividing by 0
       theta_0 = theta_p;
       particles[i].x = x_p + velocity * delta_t * cos(theta_0);
       particles[i].y = y_p + velocity * delta_t * sin(theta_0);
-      particles[i].theta = theta_0 + yaw_rate * delta_t;
+      particles[i].theta = theta_p;
     }
   }
-
-//  for (unsigned int i = 0; i < particles.size(); ++i) {
-//    std::cout << "Particle " << particles[i].id << ": "
-//               << particles[i].x << ", " << particles[i].y << "\n";
-//  }
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
@@ -177,6 +167,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     // Associate the closest landmark to each observation
     dataAssociation(landmarks, observations_mc);
     //SetAssociations(particles[i], observations_mc[:].id, observations_mc.x, observations_mc.y);
+
+    // Calculate each particle's weight using the multivariate
+    // gaussian to get the probability of each observation to it's associated landmark
     double obs_prob;
     double total_prob = 1;
     double coeff = 1/ (2 * M_PI * std_landmark[0] * std_landmark[1]);
@@ -191,10 +184,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       if (obs_prob > max_prob){
         max_prob = obs_prob;
       }
-      if (obs_prob < 1e-4){
-        obs_prob = 1e-4;
-      }
-
       total_prob *= obs_prob;
     }
     particles[i].weight = total_prob;
@@ -204,10 +193,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   double final_prob = 0;
   for (unsigned int i=0; i < particles.size(); ++i) {
     particles[i].weight /= weights_sum;
-    //std::cout << particles[i].weight << "\n";
     final_prob += particles[i].weight;
   }
-  //std::cout << weights_sum << "\n\n";
 }
 
 void ParticleFilter::resample() {
@@ -217,25 +204,24 @@ void ParticleFilter::resample() {
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
-	vector<Particle> new_particles; // new particle array
-	vector<double> weights;  // vector of weights, indexed by particle index
+	vector<Particle> resampled_particles;    // new particle array
+	vector<double> weights;                 // vector of weights
 
-	for (int i=0; i < particles.size(); i++) {
+	for (unsigned int i=0; i<particles.size(); i++) {
 		weights.push_back(particles[i].weight);
 	}
 
-	std::default_random_engine gen;  // RNG
-	std::discrete_distribution<int> dist_weights(weights.begin(), weights.end());  // discrete distribution based on particle weights
+	std::default_random_engine gen;
+	// discrete distribution based on particle weights
+	std::discrete_distribution<int> dist_weights(weights.begin(), weights.end());
 
 	// Sample from discrete distribution
-	for (int i=0; i < particles.size(); i++) {
-		int random_idx = dist_weights(gen);
-		//std::cout << random_idx << ", ";
-		new_particles.push_back(particles[random_idx]);
+	int index;
+	for (unsigned int i=0; i < particles.size(); i++) {
+		index = dist_weights(gen);
+		resampled_particles.push_back(particles[index]);
 	}
-  //std::cout << "\n";
-	// Replace original particle vector
-  particles = new_particles;
+  particles = resampled_particles;
 }
 
 void ParticleFilter::SetAssociations(Particle& particle,
