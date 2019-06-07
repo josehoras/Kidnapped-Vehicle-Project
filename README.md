@@ -1,5 +1,46 @@
-# Overview
-This repository contains all the code needed to complete the final project for the Localization course in Udacity's Self-Driving Car Nanodegree.
+# Kidnapped Vehicle Project
+
+Self-Driving Car Engineer Nanodegree Program
+
+In this project I implemented a Particle Filter to accurately estimate the position of a car based on distance measurements to predetermined landmarks in the map. 
+
+A number of particles are defined, which will be updated on each step. Particles with low probability to be close to the car position according to the measurements to the landmark, will be randomly discarded and instead particles with higher probability will be resampled. The accuracy of the filter is measured by the RMSE value of the highest probability particle.
+
+The simulation delivers a great accuracy within the time specified in the [project rubric](https://review.udacity.com/#!/rubrics/1965/view).
+
+<figure>
+	<img src="./final_screenshot.png" width="40%" height="40%" />
+</figure>
+
+## Code desdription
+
+A starter code is given by the Udacity project contained in `/src`. To implement the full particle filter only the file `particle_filter.cpp` needed to be completed. The main functions, and steps in the implementation, are:
+
+- init(): Initializes the particle randomly in a Gaussian distribution around the car's position given by the GPS.
+The Gaussian distribution is implemented using `default_random_engine`, that picks values from the given distribution, and the distribution `normal_distribution`
+```
+num_particles = 50;
+
+std::default_random_engine gen;
+normal_distribution<double> dist_x(x, std[0]);
+  	...
+
+for (int i = 0; i < num_particles; ++i) {
+	....
+p.x = dist_x(gen);
+	....
+particles.push_back(p);
+}
+ParticleFilter::is_initialized = true;
+```
+Choosing even 9 particles was already enough to finish the simulation successfully, so 50 particles contains a big buffer without still compromising on execution speed. The simulation began to last more than the specified 100 seconds with 1200 particles, on my computer.
+
+- prediction(): Updates the particles' position according to the motion model, and introducing the random Gaussian noise.
+- updateWeights(): Assigns weights to the particles according to the probability to be at the correct car's position.
+- resample(): Chooses which particles pass to the next cycle, with repetition, according to their weights.
+
+
+
 
 #### Submission
 All you will need to submit is your `src` directory. You should probably do a `git pull` before submitting to verify that your project passes the most up-to-date version of the grading code (there are some parameters in `src/main.cpp` which govern the requirements on accuracy and run time).
