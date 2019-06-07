@@ -34,12 +34,73 @@ The Gaussian distribution is implemented using `default_random_engine`, that pic
 	Choosing	 even 9 particles was already enough to finish the simulation successfully, so 50 particles contains a big buffer without still compromising on execution speed. The simulation began to last more than the specified 100 seconds with 1200 particles, on my computer.
 
 - prediction(): Updates the particles' position according to the motion model, and introducing the random Gaussian noise.
+The motion model used is the bicycle model, where the particles' positions are updated accounting for their velocity and yaw rate. As the motion equations of the model include a division by the yaw rate, a particular case for zero or very small yaw rate is used as well to avoid divisions by zero.
+
+		  for (unsigned int i = 0; i < particles.size(); ++i) {
+		    normal_distribution<double> dist_x(particles[i].x, std_pos[0]);
+				....
+		    x_p = dist_x(gen);
+				....
+		    if (abs(yaw_rate) > 1e-8){
+		      theta_0 = theta_p;
+		      theta_f = theta_0 + yaw_rate * delta_t;
+				...
+		      particles[i].x = x_p + (velocity / yaw_rate) * (sin(theta_f) - sin(theta_0));
+				...
+		    }
+		    else {
+		      theta_0 = theta_p;
+		      particles[i].x = x_p + velocity * delta_t * cos(theta_0);
+				....
+		    }
+		  }
+
 - updateWeights(): Assigns weights to the particles according to the probability to be at the correct car's position.
+First, the observations coordinates, that are given within our car system of coordinates, will be transformed to the map's system of coordinates:
+
+	    vector<LandmarkObs> observations_mc;   // observations in map coordinates
+	    for (unsigned int j=0; j < observations.size(); ++j) {
+	      LandmarkObs obs_mc;
+	      obs_mc.id = observations[j].id;
+	      obs_mc.x = cos(particles[i].theta) * observations[j].x -
+		         sin(particles[i].theta) * observations[j].y +
+		         particles[i].x;
+	      obs_mc.y = sin(particles[i].theta) * observations[j].x +
+		         cos(particles[i].theta) * observations[j].y +
+		         particles[i].y;
+	      observations_mc.push_back(obs_mc);
+	    }
+
+Second, the landmarks need to be converted to the same datatype as the coordinates. Next, each observation is associated to one landmark, just choosing the nearest one. This is done in the function dataAssociation().
+
+Finally, each observation has a certain probability to actually be the observation of its associated landmark, depending on how accurate, or close, the observation and the landmark are. This is calculated by the Multivariate-Gaussian probability density. The probability assigned to each particle is the multiplication of the probabilities of its corresponding observations. The probabilities of all particles is normalized in the last step.
+
+		    for (unsigned int j=0; j < observations_mc.size(); ++j) {
+		      mu_x = landmarks[observations_mc[j].id].x;
+		      mu_y = landmarks[observations_mc[j].id].y;
+		      exponent = -((pow(observations_mc[j].x - mu_x, 2) / (2 * pow(std_landmark[0], 2))) +
+				   	  (pow(observations_mc[j].y - mu_y, 2) / (2 * pow(std_landmark[1], 2))) );
+		      obs_prob = coeff * exp(exponent);
+		      total_prob *= obs_prob;
+		    }
+		    particles[i].weight = total_prob;
+		    weights_sum += particles[i].weight;
+		  }
+		  // Normalize
+		  for (unsigned int i=0; i < particles.size(); ++i) {
+		    particles[i].weight /= weights_sum;
+		  }
+  
+
 - resample(): Chooses which particles pass to the next cycle, with repetition, according to their weights.
+As previously, I use `default_random_engine`, but the distribution to choose the particle indexes according to their weights is `discrete_distribution`
 
-
-
-
+		std::default_random_engine gen;
+		std::discrete_distribution<int> dist_weights(weights.begin(), weights.end());
+		for (unsigned int i=0; i < particles.size(); i++) {
+			index = dist_weights(gen);
+			resampled_particles.push_back(particles[index]);
+		}
 
 
 ## Installation and Build
